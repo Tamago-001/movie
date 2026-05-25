@@ -1,0 +1,41 @@
+import React from 'react';
+import { MediaPool } from './components/MediaPool';
+import { PreviewPlayer } from './components/PreviewPlayer';
+import { Timeline } from './components/Timeline';
+import { PropertyPanel } from './components/PropertyPanel';
+
+export const Layout: React.FC = () => {
+  return (
+    <div className="w-screen h-screen bg-editor-bg text-gray-200 flex flex-col overflow-hidden select-none font-sans dark">
+      
+      {/* ヘッダー */}
+      <header className="h-12 border-b border-editor-border bg-editor-panel flex items-center justify-between px-4 z-10">
+        <div className="flex items-center space-x-3">
+          <div className="w-6 h-6 bg-editor-accent rounded-md flex items-center justify-center font-bold text-xs text-white">W</div>
+          <span className="font-semibold tracking-wider text-sm">WebStudio (FFmpeg.wasm)</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-gray-400 bg-editor-bg px-2 py-1 rounded border border-editor-border">ログイン不要 / ローカル処理</span>
+          <button className="bg-editor-accent hover:bg-editor-accentHover text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+            動画を書き出し
+          </button>
+        </div>
+      </header>
+
+      {/* メインワークスペース */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        
+        {/* 上部3ペイン（左：素材・中：プレビュー・右：プロパティ） */}
+        <div className="flex-1 flex row overflow-hidden border-b border-editor-border">
+          <MediaPool />
+          <PreviewPlayer />
+          <PropertyPanel />
+        </div>
+
+        {/* 下部タイムライン */}
+        <Timeline />
+
+      </main>
+    </div>
+  );
+};

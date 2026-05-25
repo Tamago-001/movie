@@ -1,0 +1,127 @@
+import React, { useRef, useEffect } from 'react';
+import { useEditorStore } from '../store';
+
+export const PreviewPlayer: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { 
+    currentVideoUrl, 
+    isPlaying, 
+    setIsPlaying, 
+    currentTime, 
+    setCurrentTime, 
+    duration, 
+    setDuration,
+    tracks
+  } = useEditorStore();
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.play().catch(() => setIsPlaying(false));
+    } else {
+      videoRef.current.pause();
+    }
+  }, [isPlaying, setIsPlaying]);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+    if (Math.abs(videoRef.current.currentTime - currentTime) > 0.2) {
+      videoRef.current.currentTime = currentTime;
+    }
+  }, [currentTime]);
+
+  useEffect(() => {
+    if (videoRef.current && currentVideoUrl) {
+      videoRef.current.load();
+    }
+  }, [currentVideoUrl]);
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current && isPlaying) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) setDuration(videoRef.current.duration);
+  };
+
+  // 不透明度のリアルタイム計算ロジック
+  const getClipOpacity = (clip: any, time: number) => {
+    const progress = time - clip.start;
+    const remaining = (clip.start + clip.duration) - time;
+    const fadeIn = clip.fadeIn ?? 0;
+    const fadeOut = clip.fadeOut ?? 0;
+
+    if (fadeIn > 0 && progress < fadeIn) {
+      return progress / fadeIn; 
+    }
+    if (fadeOut > 0 && remaining < fadeOut) {
+      return remaining / fadeOut; 
+    }
+    return 1; 
+  };
+
+  const textTrack = tracks.find(t => t.type === 'text');
+  const activeTextClips = textTrack
+    ? textTrack.clips.filter(c => currentTime >= c.start && currentTime <= c.start + c.duration)
+    : [];
+
+  const formatTime = (time: number) => {
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <section className="flex-1 bg-editor-bg flex flex-col items-center justify-center p-4 min-w-[400px]">
+      <div className="w-full max-w-2xl aspect-video bg-black rounded-lg shadow-2xl border border-editor-border flex flex-col justify-between overflow-hidden relative">
+        
+        <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden">
+          {currentVideoUrl ? (
+            <video
+              ref={videoRef}
+              src={currentVideoUrl}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => setIsPlaying(false)}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="text-gray-500 text-sm">素材を追加し、クリックしてプレビュー</div>
+          )}
+
+          {/* テロップのオーバーレイ表示 */}
+          {activeTextClips.map((clip) => (
+            <div
+              key={clip.id}
+              className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded text-lg font-medium tracking-wide text-center pointer-events-none transition-opacity duration-75 select-none max-w-[80%]"
+              style={{ opacity: getClipOpacity(clip, currentTime) }}
+            >
+              {clip.text}
+            </div>
+          ))}
+        </div>
+
+        <div className="h-11 bg-editor-panel/90 border-t border-editor-border flex items-center justify-between px-4 text-xs z-10">
+          <div className="font-mono text-gray-400">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+          
+          <div className="flex space-x-6 text-sm">
+            <button onClick={() => setCurrentTime(0)} className="hover:text-editor-accent text-gray-400 transition-colors">⏮</button>
+            <button 
+              onClick={() => setIsPlaying(!isPlaying)}
+              disabled={!currentVideoUrl && activeTextClips.length === 0}
+              className={`font-bold transition-colors ${currentVideoUrl || activeTextClips.length > 0 ? 'text-white hover:text-editor-accent' : 'text-gray-600'}`}
+            >
+              {isPlaying ? '⏸ 一時停止' : '▶ 再生'}
+            </button>
+          </div>
+          
+          <span className="text-gray-500 font-mono">1080p</span>
+        </div>
+      </div>
+    </section>
+  );
+};
